@@ -11,8 +11,6 @@
 
 create type public.member_role       as enum ('admin', 'manager', 'creator', 'reviewer');
 create type public.membership_status as enum ('invited', 'active', 'suspended');
--- company: internal staff. own_work: external creators/agencies, who only see their own work.
-create type public.access_scope      as enum ('company', 'own_work');
 create type public.visibility_class  as enum ('public_to_creators', 'internal', 'confidential', 'local_only');
 
 create type public.submission_status as enum
@@ -48,7 +46,6 @@ create table public.org_memberships (
   user_id         uuid not null references public.users (user_id),
   role            public.member_role not null,
   status          public.membership_status not null default 'invited',
-  access_scope    public.access_scope not null default 'company',
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );

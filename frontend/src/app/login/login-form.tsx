@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/field";
 import { loginAction, type LoginState } from "@/lib/actions/auth";
 import { DEMO_PASSWORD, DEMO_USERS, orgName } from "@/lib/demo-users";
-import { ROLE_LABEL, SCOPE_LABEL } from "@/lib/domain";
+import { ROLE_LABEL } from "@/lib/domain";
 
 const INITIAL: LoginState = {};
 
@@ -54,8 +54,7 @@ export function LoginForm() {
                   className="flex min-h-11 w-full flex-col items-start rounded-control border border-border bg-surface/80 px-3 py-2 text-left transition-colors hover:border-accent/40 hover:bg-purple-soft"
                 >
                   <span className="text-[14px] font-semibold">
-                    {ROLE_LABEL[m.role]}
-                    {m.role === "creator" ? ` (${SCOPE_LABEL[m.scope]})` : ""} · {orgName(m.orgId)}
+                    {ROLE_LABEL[m.role]} · {orgName(m.orgId)}
                     {u.memberships.length > 1 ? " +1 company" : ""}
                   </span>
                   <span className="break-all text-[13px] text-text-muted">{u.email}</span>

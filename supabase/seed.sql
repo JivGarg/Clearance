@@ -51,16 +51,16 @@ from auth.users u where u.email like '%.test';
 insert into public.users (user_id, name, email, auth_user_id)
 select id, raw_user_meta_data ->> 'name', email, id from auth.users where email like '%.test';
 
-insert into public.org_memberships (organization_id, user_id, role, status, access_scope) values
-  ('0a000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', 'admin',    'active',    'company'),
-  ('0a000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', 'manager',  'active',    'company'),
-  ('0a000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000003', 'reviewer', 'active',    'company'),
-  ('0a000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000004', 'creator',  'active',    'company'),
-  ('0a000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000005', 'creator',  'active',    'own_work'),
-  ('0a000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000007', 'reviewer', 'suspended', 'company'),
-  ('0a000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000006', 'admin',    'active',    'company'),
-  -- The agency works for both companies (DataBasePRD decision 3): a different scope in each.
-  ('0a000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000005', 'creator',  'active',    'company');
+insert into public.org_memberships (organization_id, user_id, role, status) values
+  ('0a000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', 'admin',    'active'),
+  ('0a000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', 'manager',  'active'),
+  ('0a000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000003', 'reviewer', 'active'),
+  ('0a000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000004', 'creator',  'active'),
+  ('0a000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000005', 'creator',  'active'),
+  ('0a000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000007', 'reviewer', 'suspended'),
+  ('0a000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000006', 'admin',    'active'),
+  -- The agency works for both companies (DataBasePRD decision 3), as a creator in each.
+  ('0a000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000005', 'creator',  'active');
 
 -- ---------------------------------------------------------------- brand knowledge (Sonic X)
 
@@ -106,7 +106,7 @@ insert into public.campaigns (campaign_id, organization_id, campaign_name, start
   ('c0000000-0000-4000-8000-000000000003', '0a000000-0000-4000-8000-000000000002', 'Calm Launch',  current_date,      current_date + 30);
 
 -- ---------------------------------------------------------------- submissions, through the workflow
--- Sana (a..04) is a company creator, Tara (a..05) an external agency, Rohan (a..03) the reviewer.
+-- Sana (a..04) is an in-house creator, Tara (a..05) an agency creator (same access), Rohan (a..03) the reviewer.
 -- Each submission ends in a different status; together they cover all six.
 
 insert into public.submissions

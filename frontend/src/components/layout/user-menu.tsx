@@ -1,7 +1,7 @@
 import { ChevronDown, LogOut } from "lucide-react";
 import { RoleSwitcher } from "@/components/layout/role-switcher";
 import { logoutAction } from "@/lib/actions/auth";
-import { ROLE_LABEL, SCOPE_LABEL, type Membership, type User } from "@/lib/domain";
+import { ROLE_LABEL, type Membership, type User } from "@/lib/domain";
 
 function initials(name: string) {
   return name
@@ -28,7 +28,6 @@ export function UserMenu({ user, membership }: { user: User; membership: Members
         <p className="break-all text-[13px] text-text-muted">{user.email}</p>
         <p className="mt-2 text-[13px]">
           {ROLE_LABEL[membership.role]}
-          {membership.role === "creator" ? ` (${SCOPE_LABEL[membership.scope]})` : ""}
         </p>
         <RoleSwitcher currentUserId={user.id} className="mt-4 flex flex-col gap-1.5 border-t border-border pt-4 md:hidden" />
         <form action={logoutAction} className="mt-4 border-t border-border pt-4">

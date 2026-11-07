@@ -14,12 +14,7 @@ export const ORGS: readonly Organization[] = [
 const SONIC = ORGS[0].id;
 const NORTHWIND = ORGS[1].id;
 
-const m = (orgId: string, role: Membership["role"], scope: Membership["scope"] = "company"): Membership => ({
-  orgId,
-  role,
-  scope,
-  status: "active",
-});
+const m = (orgId: string, role: Membership["role"]): Membership => ({ orgId, role, status: "active" });
 
 export const DEMO_USERS: readonly User[] = [
   { id: "a0000000-0000-4000-8000-000000000001", name: "Aarav Mehta", email: "admin@sonicx.test", memberships: [m(SONIC, "admin")] },
@@ -27,11 +22,11 @@ export const DEMO_USERS: readonly User[] = [
   { id: "a0000000-0000-4000-8000-000000000003", name: "Rohan Iyer", email: "reviewer@sonicx.test", memberships: [m(SONIC, "reviewer")] },
   { id: "a0000000-0000-4000-8000-000000000004", name: "Sana Qureshi", email: "creator@sonicx.test", memberships: [m(SONIC, "creator")] },
   {
-    // External agency for Sonic X, internal creator for Northwind: one person, two scopes.
+    // Agency creator working for both companies: one person, a membership in each.
     id: "a0000000-0000-4000-8000-000000000005",
     name: "Tara D'Souza",
     email: "agency@sonicx.test",
-    memberships: [m(SONIC, "creator", "own_work"), m(NORTHWIND, "creator")],
+    memberships: [m(SONIC, "creator"), m(NORTHWIND, "creator")],
   },
   { id: "a0000000-0000-4000-8000-000000000006", name: "Lena Park", email: "admin@northwind.test", memberships: [m(NORTHWIND, "admin")] },
 ];

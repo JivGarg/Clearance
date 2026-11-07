@@ -2,8 +2,8 @@
 -- Every policy is scoped through an ACTIVE membership in the row's company, so rows from another
 -- company are never visible (rule 1, NFR "zero cross-company reads").
 --
--- One creator role. access_scope separates internal (company) from external (own_work) creators,
--- and only changes which brand knowledge they may read (visibility classes, see 0002).
+-- One creator role with one access level: internal and external creators are treated the same
+-- (team decision; DataBasePRD's access_scope column is intentionally not implemented).
 --
 -- Matrix decisions where DataBasePRD leaves room (listed in CONTEXT.md):
 --  * Everyone reads their own membership and user row, so the app can know who and what they are.
@@ -180,7 +180,7 @@ revoke update on public.notifications from authenticated;
 grant  update (read_at) on public.notifications to authenticated;
 
 grant execute on function
-  public.is_system_actor(), public.app_user_id(), public.member_role(uuid), public.member_scope(uuid),
+  public.is_system_actor(), public.app_user_id(), public.member_role(uuid),
   public.can_see_class(uuid, public.visibility_class), public.can_view_submission(uuid),
   public.can_see_source(uuid, public.source_type, uuid), public.restricted_issue_count(uuid),
   public.latest_revision_id(uuid), public.has_active_embargo(uuid), public.is_active_reviewer(uuid, uuid),

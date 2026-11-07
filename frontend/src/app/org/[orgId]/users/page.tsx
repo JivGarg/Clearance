@@ -13,7 +13,7 @@ export default async function Page({ params }: PageProps<"/org/[orgId]/users">) 
       title={"Users & Roles"}
       description={"Members, roles and invitations."}
       specRef={"designPRD 2.4 (frame 6), 4.1"}
-      contents={["Role totals", "Member table: role, scope (internal or external), status", "Invite, change role, suspend; history stays attributed"]}
+      contents={["Role totals", "Member table: role, status", "Invite, change role, suspend; history stays attributed"]}
     />
   );
 }

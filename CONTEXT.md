@@ -12,8 +12,9 @@ was decided, what is verified, what is next. **Update it at the end of every ses
 | Workflow background only | [PRD.md](PRD.md) (original brief; its neo-brutalist design, 5 roles and 10 statuses are **superseded**) |
 
 Team decisions on top of those documents:
-- **Internal and external creators are one role, `creator`.** `org_memberships.access_scope`
-  (`company` / `own_work`) separates them, and only changes which brand knowledge they can read.
+- **Internal and external creators are one role, `creator`, with identical access** (decided
+  2026-11-08). There is no `access_scope` column: DataBasePRD's `access_scope` is intentionally not
+  implemented. Every creator reads public + internal knowledge, never confidential or local-only.
 - Supabase keys are not set yet; the schema is written and tested locally (section 8).
 - `dashboard-reference.png` and `Clearance_HIVEMIND.pdf`, which designPRD cites, are **not in the
   repo**; the visuals follow designPRD's written description and tokens.
@@ -39,12 +40,12 @@ uvicorn app.main:app --reload --port 8000
 pytest                                    # 37 tests
 
 # Database: real migrations + seed + tests on a throwaway local Postgres (no Supabase needed)
-pip install pgserver psycopg2-binary && python supabase/tests/run_local.py     # 68 expectations
+pip install pgserver psycopg2-binary && python supabase/tests/run_local.py     # 70 expectations
 ```
 
 - **Demo sign-in** (password `clearance-demo`): `admin@`, `manager@`, `reviewer@`, `creator@`,
   `agency@sonicx.test`, and `admin@northwind.test`. The agency user belongs to **both** companies
-  (external in Sonic X, internal in Northwind) to exercise multi-company access.
+  (a creator in each) to exercise multi-company access.
 - **Env:** one `.env` at the repo root (template `.env.example`), loaded by `frontend/next.config.ts`
   and `backend/app/config.py`. Git-ignored. Server-only keys never get a `NEXT_PUBLIC_` prefix.
   `.env` currently holds only `GEMINI_API_KEY` (its value was once printed in a session transcript:
@@ -125,7 +126,7 @@ SQL enums). Change them together.
 |---|---|---|---|---|
 | Organization / memberships | Edit | View | Own membership only | Own membership only |
 | Guidelines | Edit | View | View | View |
-| Assets, facts | Edit | View | View by class: company = public + internal; own_work = public only | View |
+| Assets, facts | Edit | View | View public + internal (never confidential / local-only) | View |
 | Embargoes | Edit | Edit | View by class (seeded embargoes are internal/confidential) | View |
 | Campaigns | Edit | Edit | View | View |
 | Submissions, revisions, checks, findings | View | View | Own (create + revise) | Assigned |
@@ -167,8 +168,9 @@ here are hand-built to the same tokens instead (no dependency added).
 | Submissions, New submission, Submission detail, Reviews, Review, Campaigns, Source, Embargoes, Analytics, Users & Roles, AI Agent Settings, Notifications, Audit Log, Settings | Labelled placeholders listing what designPRD requires |
 | Integrations | Shown as "Soon" (designPRD: future) |
 
-designPRD acceptance (section 9): A02 (external creator cannot read embargo) and A12 (cross-company ID
-guess) are **enforced and tested in the database**; A07/A08 holds and A11 stale approval are enforced
+designPRD acceptance (section 9): A02 (creator cannot read a confidential embargo; since the creator
+merge this applies to every creator, and *internal* embargoes are readable by all creators) and A12
+(cross-company ID guess) are **enforced and tested in the database**; A07/A08 holds and A11 stale approval are enforced
 in the database; everything else needs the UI wired to data.
 
 ## 7. Next steps, in order
@@ -182,8 +184,7 @@ in the database; everything else needs the UI wired to data.
 6. Submission detail (intent, findings with citations, diff, accept/reject per change), Reviews and decisions.
 7. Admin screens: knowledge CRUD, embargoes, users & roles, agent settings, audit log.
 8. Write `IMPLEMENTATION_PLAN.md` and `KNOWN_LIMITATIONS.md` (designPRD 11.3, 11.11).
-9. Open questions: may managers create submissions or approve medium-risk fixes? Can external creators
-   read some guidelines? (designPRD 13; DataBasePRD 10).
+9. Open questions: may managers create submissions or approve medium-risk fixes? (designPRD 13; DataBasePRD 10).
 
 ## 8. Verified, and not verified
 
@@ -191,9 +192,10 @@ in the database; everything else needs the UI wired to data.
 company x page x user cases, 0 mismatches; guarded routes served `no-store` (no frozen redirect);
 browser run in Edge, 20 checks (login, wrong password, role-aware nav, honest KPIs, company switcher
 with per-company role, tabs, modal, toast, skip link, no console errors, no horizontal scroll at 360px on
-5 pages, drawer); backend 37 tests; SQL 68 expectations on a real local Postgres; the seed itself runs
-through the real workflow triggers. Mutation checks: making external creators read internal knowledge
-and allowing self-approval were each caught; removing one embargo gate was still blocked by the second
+5 pages, drawer); backend 37 tests; SQL 70 expectations on a real local Postgres (2026-11-08, after the creator
+merge; includes "agency creator has the same knowledge access as the in-house creator"); the seed
+itself runs through the real workflow triggers. Mutation checks (2026-11-07, before the merge):
+allowing self-approval was caught; removing one embargo gate was still blocked by the second
 layer, and removing both was caught.
 
 **Not verified:** anything on a real Supabase project (GoTrue login of seeded users; password hashing,

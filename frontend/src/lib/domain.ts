@@ -15,13 +15,7 @@ export const ROLE_LABEL: Record<Role, string> = {
   reviewer: "Authorised reviewer",
 };
 
-/** company = internal staff; own_work = external creator/agency, sees only their own work. */
-export type AccessScope = "company" | "own_work";
-
-export const SCOPE_LABEL: Record<AccessScope, string> = {
-  company: "Internal",
-  own_work: "External",
-};
+// Internal and external creators share the single `creator` role with identical access.
 
 // ------------------------------------------------------------ submission status (DataBasePRD 5.3)
 
@@ -86,7 +80,6 @@ export interface Organization {
 export interface Membership {
   orgId: Id;
   role: Role;
-  scope: AccessScope;
   status: "invited" | "active" | "suspended";
 }
 

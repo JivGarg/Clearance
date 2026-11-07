@@ -17,33 +17,24 @@ language sql stable security definer set search_path = public, pg_temp as $$
   select user_id from public.users where auth_user_id = auth.uid()
 $$;
 
--- Caller's role / scope in a company, counting ACTIVE memberships only (invited and suspended
--- members have no access).
+-- Caller's role in a company, counting ACTIVE memberships only (invited and suspended members have
+-- no access).
 create or replace function public.member_role(p_org uuid) returns public.member_role
 language sql stable security definer set search_path = public, pg_temp as $$
   select m.role from public.org_memberships m
    where m.organization_id = p_org and m.user_id = public.app_user_id() and m.status = 'active'
 $$;
 
-create or replace function public.member_scope(p_org uuid) returns public.access_scope
-language sql stable security definer set search_path = public, pg_temp as $$
-  select m.access_scope from public.org_memberships m
-   where m.organization_id = p_org and m.user_id = public.app_user_id() and m.status = 'active'
-$$;
-
--- Visibility classes (designPRD 4.2). Staff see everything. Company creators see public + internal.
--- Own-work (external) creators see only what is explicitly public to creators.
+-- Visibility classes (designPRD 4.2). Staff see everything. Creators, internal or external alike
+-- (one role, one access level; team decision overriding DataBasePRD's access_scope), see public +
+-- internal knowledge, never confidential or local-only.
 create or replace function public.can_see_class(p_org uuid, p_class public.visibility_class) returns boolean
 language sql stable security definer set search_path = public, pg_temp as $$
   select case public.member_role(p_org)
            when 'admin'    then true
            when 'manager'  then true
            when 'reviewer' then true
-           when 'creator'  then case public.member_scope(p_org)
-                                  when 'company'  then p_class in ('public_to_creators', 'internal')
-                                  when 'own_work' then p_class = 'public_to_creators'
-                                  else false
-                                end
+           when 'creator'  then p_class in ('public_to_creators', 'internal')
            else false
          end
 $$;

@@ -8,8 +8,8 @@ begin;
 create schema zz_test;
 grant usage on schema zz_test to public;
 
--- Seeded users: 1 admin, 2 manager, 3 reviewer, 4 creator (company scope), 5 agency creator
--- (own_work in Sonic X, company in Northwind), 6 Northwind admin, 7 suspended reviewer.
+-- Seeded users: 1 admin, 2 manager, 3 reviewer, 4 in-house creator, 5 agency creator (Sonic X and
+-- Northwind; same access as any creator), 6 Northwind admin, 7 suspended reviewer.
 create function zz_test.u(n int) returns uuid language sql immutable as $$
   select ('a0000000-0000-4000-8000-00000000000' || n)::uuid $$;
 create function zz_test.s(n int) returns uuid language sql immutable as $$
@@ -88,32 +88,41 @@ select zz_test.expect('reviewer: reads all knowledge incl. confidential',
 select zz_test.expect('reviewer: no memberships except her own',
   zz_test.n('select count(*) from org_memberships') = 1);
 
-select zz_test.as_user(zz_test.u(4));  -- creator, company scope
-select zz_test.expect('company creator: sees only her own submissions', zz_test.n('select count(*) from submissions') = 5);
-select zz_test.expect('company creator: public + internal facts, never confidential',
+select zz_test.as_user(zz_test.u(4));  -- in-house creator
+select zz_test.expect('creator: sees only her own submissions', zz_test.n('select count(*) from submissions') = 5);
+select zz_test.expect('creator: public + internal facts, never confidential',
   zz_test.n('select count(*) from approved_facts') = 3
   and zz_test.n($$select count(*) from approved_facts where confidentiality_level = 'confidential'$$) = 0);
-select zz_test.expect('company creator: sees internal embargo, not the confidential codename',
+select zz_test.expect('creator: sees internal embargo, not the confidential codename',
   zz_test.n('select count(*) from embargoes') = 1
   and zz_test.n($$select count(*) from embargoes where restricted_item like 'Project Nova%'$$) = 0);
-select zz_test.expect('company creator: embargo finding is hidden, but counted as restricted',
+select zz_test.expect('creator: embargo finding is hidden, but counted as restricted',
   zz_test.n($$select count(*) from issues i join ai_checks c on c.check_id = i.check_id where c.submission_id = zz_test.s(7)$$) = 0
   and zz_test.n($$select restricted_issue_count(zz_test.s(7))$$) = 1);
-select zz_test.expect('company creator: sees findings she is allowed to read (3)', zz_test.n('select count(*) from issues') = 3);
-select zz_test.expect('company creator: no agent log, no assignments',
+select zz_test.expect('creator: sees findings she is allowed to read (3)', zz_test.n('select count(*) from issues') = 3);
+select zz_test.expect('creator: no agent log, no assignments',
   zz_test.n('select count(*) from agent_action_log') = 0 and zz_test.n('select count(*) from review_assignments') = 0);
-select zz_test.expect('company creator: cannot see other creators',
+select zz_test.expect('creator: cannot see other creators',
   zz_test.n($$select count(*) from users where user_id = zz_test.u(5)$$) = 0
   and zz_test.n($$select count(*) from users where user_id = zz_test.u(3)$$) = 1);
 
-select zz_test.as_user(zz_test.u(5));  -- agency: own_work in Sonic X, company in Northwind
+select zz_test.expect('creator: sees brand assets (public + internal, counted for the agency check)',
+  zz_test.n('select count(*) from brand_assets') > 0);
+create temp table zz_creator_assets as select count(*) as n from brand_assets;
+grant select on zz_creator_assets to public;
+
+select zz_test.as_user(zz_test.u(5));  -- agency creator in Sonic X and in Northwind
 select zz_test.expect('agency: sees only her own work, across both companies',
   zz_test.n('select count(*) from submissions') = 3);
-select zz_test.expect('agency (own_work): only public-to-creators knowledge in Sonic X',
-  zz_test.n($$select count(*) from approved_facts where organization_id = zz_test.org(1)$$) = 2
-  and zz_test.n($$select count(*) from embargoes where organization_id = zz_test.org(1)$$) = 0
-  and zz_test.n($$select count(*) from brand_assets where organization_id = zz_test.org(1)$$) = 1);
-select zz_test.expect('agency (company scope elsewhere): internal facts in Northwind',
+select zz_test.expect('agency creator: same knowledge access as the in-house creator in Sonic X',
+  zz_test.n($$select count(*) from approved_facts where organization_id = zz_test.org(1)$$) = 3
+  and zz_test.n($$select count(*) from embargoes where organization_id = zz_test.org(1)$$) = 1
+  and zz_test.n($$select count(*) from brand_assets where organization_id = zz_test.org(1)$$)
+      = (select n from zz_creator_assets));
+select zz_test.expect('agency creator: still never confidential',
+  zz_test.n($$select count(*) from approved_facts where confidentiality_level = 'confidential'$$) = 0
+  and zz_test.n($$select count(*) from embargoes where restricted_item like 'Project Nova%'$$) = 0);
+select zz_test.expect('agency creator: internal facts in Northwind too',
   zz_test.n($$select count(*) from approved_facts where organization_id = zz_test.org(2)$$) = 1);
 select zz_test.expect('agency: decisions and notifications on her own work only',
   zz_test.n('select count(*) from approval_decisions') = 2 and zz_test.n('select count(*) from notifications') = 2);
