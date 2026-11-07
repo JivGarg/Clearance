@@ -2,9 +2,10 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { DEMO_PASSWORD, findDemoUserByEmail, findDemoUserById } from "@/lib/demo-users";
+import { acceptInvitations } from "@/lib/data/mutations";
+import { DEMO_PASSWORD } from "@/lib/demo-users";
 import { activeMembership, homeFor, orgPath } from "@/lib/roles";
-import { SESSION_COOKIE, demoAuthEnabled, getSessionUser } from "@/lib/session";
+import { SESSION_COOKIE, demoAuthEnabled, findUserIdByEmail, getSessionUser, loadUser } from "@/lib/session";
 
 /** Demo auth actions. Replace with Supabase Auth when credentials exist (see lib/session.ts). */
 
@@ -27,9 +28,16 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   if (!demoAuthEnabled()) return { error: "Demo sign-in is disabled on this deployment." };
   if (!email || !password) return { error: "Enter your email and password." };
 
-  const user = findDemoUserByEmail(email);
+  const userId = findUserIdByEmail(email);
   // Same message for unknown email and wrong password.
-  if (!user || password !== DEMO_PASSWORD) return { error: "Email or password is incorrect." };
+  if (!userId || password !== DEMO_PASSWORD) return { error: "Email or password is incorrect." };
+
+  // Demo stand-in for accepting an invitation (designPRD 4.1): first sign-in activates it.
+  acceptInvitations(userId);
+  const user = loadUser(userId);
+  if (!user || !user.memberships.some((m) => m.status === "active")) {
+    return { error: "This account has no active access to any company. Ask your admin." };
+  }
 
   (await cookies()).set(SESSION_COOKIE, user.id, COOKIE_OPTIONS);
   redirect(homeFor(user));
@@ -38,8 +46,8 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
 /** Demo account switcher: only an existing session may switch. */
 export async function switchUserAction(formData: FormData): Promise<void> {
   if (!(await getSessionUser())) redirect("/login");
-  const target = findDemoUserById(String(formData.get("userId") ?? ""));
-  if (!target) return;
+  const target = loadUser(String(formData.get("userId") ?? ""));
+  if (!target || !target.memberships.some((m) => m.status === "active")) return;
   (await cookies()).set(SESSION_COOKIE, target.id, COOKIE_OPTIONS);
   redirect(homeFor(target));
 }

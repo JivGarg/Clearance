@@ -11,12 +11,15 @@ export function AutonomyControl({
   defaultValue,
   value: valueProp,
   onChange,
+  levels = AUTONOMY_LEVELS,
 }: {
   legend: string;
   name: string;
   defaultValue?: AutonomyLevel;
   value?: AutonomyLevel;
   onChange?: (value: AutonomyLevel) => void;
+  /** Which choices to offer (e.g. medium risk never offers auto-fix). */
+  levels?: readonly AutonomyLevel[];
 }) {
   const [inner, setInner] = useState<AutonomyLevel>(defaultValue ?? "ask_first");
   const value = valueProp ?? inner;
@@ -25,7 +28,7 @@ export function AutonomyControl({
     <fieldset className="min-w-0">
       <legend className="sr-only">{legend}</legend>
       <div className="glass flex flex-col gap-1 rounded-control p-1 sm:flex-row">
-        {AUTONOMY_LEVELS.map((level) => (
+        {levels.map((level) => (
           <label key={level} className="relative flex-1 cursor-pointer">
             <input
               type="radio"

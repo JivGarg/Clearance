@@ -66,7 +66,16 @@ export const CHANNEL_LABEL: Record<Channel, string> = {
 export const CONTENT_TYPES = ["text", "image", "document", "video"] as const;
 export type ContentType = (typeof CONTENT_TYPES)[number];
 
-export type VisibilityClass = "public_to_creators" | "internal" | "confidential" | "local_only";
+export const VISIBILITY_CLASSES = ["public_to_creators", "internal", "confidential", "local_only"] as const;
+export type VisibilityClass = (typeof VISIBILITY_CLASSES)[number];
+
+/** designPRD 4.2. Creators read public + internal; confidential and local-only are staff/reviewer only. */
+export const VISIBILITY_LABEL: Record<VisibilityClass, string> = {
+  public_to_creators: "Public to creators",
+  internal: "Internal",
+  confidential: "Confidential",
+  local_only: "Local only",
+};
 
 // -------------------------------------------------------------------- people
 

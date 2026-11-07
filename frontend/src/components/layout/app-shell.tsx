@@ -5,9 +5,11 @@ import { NotificationsPanel } from "@/components/layout/notifications-panel";
 import { OrgSwitcher } from "@/components/layout/org-switcher";
 import { RoleSwitcher } from "@/components/layout/role-switcher";
 import { UserMenu } from "@/components/layout/user-menu";
-import { ORGS } from "@/lib/demo-users";
+import { listNotifications, orgSettings } from "@/lib/data/queries";
+import { db } from "@/lib/data/store";
 import type { Membership, User } from "@/lib/domain";
-import { navFor } from "@/lib/roles";
+import { formatDateTime } from "@/lib/format";
+import { navFor, orgPath } from "@/lib/roles";
 
 function Wordmark() {
   return (
@@ -23,7 +25,23 @@ function Wordmark() {
  */
 export function AppShell({ user, membership, children }: { user: User; membership: Membership; children: ReactNode }) {
   const groups = navFor(membership.role);
-  const myOrgs = ORGS.filter((o) => user.memberships.some((m) => m.orgId === o.id && m.status === "active"));
+  const d = db();
+  const myOrgs = d.organizations
+    .filter((o) => user.memberships.some((m) => m.orgId === o.organizationId && m.status === "active"))
+    .map((o) => ({ id: o.organizationId, name: o.companyName }));
+  // This company's notifications only (people can belong to several companies).
+  const tz = orgSettings(membership.orgId)?.timezone ?? "UTC";
+  const mine = listNotifications(user.id).filter(
+    (n) => !n.submissionId || d.submissions.find((s) => s.submissionId === n.submissionId)?.organizationId === membership.orgId,
+  );
+  const bellItems = mine.slice(0, 5).map((n) => ({
+    id: n.notificationId,
+    message: n.message,
+    when: formatDateTime(n.createdAt, tz),
+    href: n.submissionId ? orgPath(membership.orgId, `submissions/${n.submissionId}`) : null,
+    unread: !n.readAt,
+  }));
+  const unread = mine.filter((n) => !n.readAt).length;
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[var(--spacing-sidebar)_minmax(0,1fr)]">
@@ -52,7 +70,7 @@ export function AppShell({ user, membership, children }: { user: User; membershi
             <OrgSwitcher orgs={myOrgs} currentOrgId={membership.orgId} />
           </div>
           <RoleSwitcher currentUserId={user.id} className="hidden items-center gap-2 md:flex" />
-          <NotificationsPanel />
+          <NotificationsPanel unreadCount={unread} items={bellItems} allHref={orgPath(membership.orgId, "notifications")} />
           <UserMenu user={user} membership={membership} />
         </header>
 

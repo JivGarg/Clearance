@@ -1,4 +1,8 @@
 import {
+  Building2,
+  Globe,
+  HardDrive,
+  Lock,
   CircleCheck,
   CircleX,
   Eye,
@@ -10,8 +14,8 @@ import {
   TriangleAlert,
   type LucideIcon,
 } from "lucide-react";
-import type { Risk, SubmissionStatus } from "@/lib/domain";
-import { RISK_LABEL, STATUS_LABEL } from "@/lib/domain";
+import type { Risk, SubmissionStatus, VisibilityClass } from "@/lib/domain";
+import { RISK_LABEL, STATUS_LABEL, VISIBILITY_LABEL } from "@/lib/domain";
 import { cn } from "@/lib/cn";
 
 /**
@@ -53,6 +57,24 @@ export function RiskBadge({ risk, className }: { risk: Risk; className?: string 
     <span className={cn(base, cls, className)}>
       <Icon aria-hidden className="size-3.5 shrink-0" strokeWidth={2.25} />
       {RISK_LABEL[risk]} risk
+    </span>
+  );
+}
+
+const VIS_STYLE: Record<VisibilityClass, { cls: string; icon: LucideIcon }> = {
+  public_to_creators: { cls: "bg-success-soft text-success-ink ring-success-ink/20", icon: Globe },
+  internal: { cls: "bg-info-soft text-info-ink ring-info-ink/20", icon: Building2 },
+  confidential: { cls: "bg-danger-soft text-danger-ink ring-danger-ink/20", icon: Lock },
+  local_only: { cls: "bg-surface-muted text-text ring-border", icon: HardDrive },
+};
+
+/** designPRD 4.2 visibility class, always icon + text. */
+export function VisibilityBadge({ value, className }: { value: VisibilityClass; className?: string }) {
+  const { cls, icon: Icon } = VIS_STYLE[value];
+  return (
+    <span className={cn(base, cls, className)}>
+      <Icon aria-hidden className="size-3.5 shrink-0" strokeWidth={2.25} />
+      {VISIBILITY_LABEL[value]}
     </span>
   );
 }

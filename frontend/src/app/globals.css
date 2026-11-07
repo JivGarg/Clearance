@@ -41,6 +41,10 @@
   --color-info-ink: #2d5fa8;
   --color-info-soft: #e5eefb;
 
+  /* Second chart series beside accent (validated: CVD ΔE 38.7 vs #7c3aed). Below 3:1 on
+     surface, so charts using it always print values and offer a table view. */
+  --color-chart-gold: #e0a23a;
+
   --radius-card: 18px;
   --radius-control: 12px;
 

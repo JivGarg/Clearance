@@ -4,7 +4,9 @@ import { cn } from "@/lib/cn";
 /** DataTable shell. Scrolls inside its own box on narrow screens so the page never does. */
 export function Table({ caption, className, children, ...props }: { caption: string } & HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="glass overflow-x-auto rounded-card">
+    // `relative` keeps absolutely positioned children (sr-only headers) inside the scroll box;
+    // without it they escape the clip and widen the whole page on phones.
+    <div className="glass relative overflow-x-auto rounded-card">
       <table className={cn("w-full border-collapse text-left text-[14px]", className)} {...props}>
         <caption className="sr-only">{caption}</caption>
         {children}

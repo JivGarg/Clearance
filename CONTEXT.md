@@ -19,10 +19,11 @@ Team decisions on top of those documents:
 - `dashboard-reference.png` and `Clearance_HIVEMIND.pdf`, which designPRD cites, are **not in the
   repo**; the visuals follow designPRD's written description and tokens.
 
-**Status (2026-11-07):** foundation. Database layer complete and tested; backend mock aligned; new
-theme, shell, company-scoped routes and role guards done. Dashboard, Knowledge Base and the design
-system page are real UI; all other screens are clearly labelled placeholders. Nothing reads the
-database yet.
+**Status (2026-11-08):** database layer complete and tested; backend mock aligned. **Admin role
+built end to end** on an in-memory **demo store** (section 3.8): dashboard, submissions (+ detail,
+release), campaigns, knowledge base (+ source detail), embargoes, analytics (+ CSV), users & roles,
+AI agent settings, settings, audit log, notifications. Still placeholders: New submission, Reviews,
+Review detail (creator/reviewer/manager flows). Nothing talks to Supabase yet.
 
 ---
 
@@ -62,8 +63,11 @@ pip install pgserver psycopg2-binary && python supabase/tests/run_local.py     #
 | `frontend/src/app/org/[orgId]/` | Company-scoped app (designPRD 3): `dashboard submissions[/new,/[id]] reviews[/[id]] campaigns knowledge[/[id]] embargoes analytics users agent notifications audit settings` |
 | `frontend/src/app/login`, `design-system` | Sign-in; reference page rendering every token and component (signed-in only) |
 | `frontend/src/components/ui/` | button, card (+ MetricCard, GradientHeroCard), badge (status, risk, tag), source-chip, field, tabs, toggle, autonomy-control, table, empty-state, dialog (Modal, Drawer), toast |
-| `frontend/src/components/layout/` | app-shell, nav-links (grouped), mobile-nav, org-switcher, role-switcher (demo accounts), notifications-panel, user-menu, page-header, placeholder-page |
-| `frontend/src/lib/` | `domain.ts` (enums/types), `roles.ts` (nav groups, `PAGE_ROLES`, `orgPath`, `homeFor`), `demo-users.ts`, `session.ts` (**auth seam**, `requireOrg`), `actions/auth.ts` |
+| `frontend/src/components/layout/` | app-shell, nav-links (grouped), mobile-nav, org-switcher, role-switcher (demo accounts), notifications-panel (live bell), user-menu, page-header, placeholder-page, demo-notice |
+| `frontend/src/components/forms/` | `form-dialog` (modal form + server action), `action-button` (one-click action, optional confirm), `inline-form` (settings forms) |
+| `frontend/src/components/charts/`, `submissions/` | Dependency-free BarList / GroupedColumns / ChartCard; shared SubmissionsTable |
+| `frontend/src/lib/data/` | **Demo store** (section 3.8): `types.ts` (rows = DB tables), `seed.ts` (= seed.sql), `store.ts`, `queries.ts` (reads, filtered like RLS), `mutations.ts` (writes, enforcing the trigger rules) |
+| `frontend/src/lib/` | `domain.ts` (enums/types), `roles.ts` (nav groups, `PAGE_ROLES`, `orgPath`, `homeFor`), `demo-users.ts`, `session.ts` (**auth seam**, `requireOrg` returns an `actor`; `actorFor` for actions), `format.ts` (timezone dates), `actions/auth.ts`, `actions/admin.ts` |
 | `backend/app/` | `schemas.py`, `routing.py` (risk routing, pure), `mock_checks.py` (Sonic X rule bank), `routers/` |
 | `supabase/migrations/` | `20261107000001_schema` (16 tables), `..02_rules` (integrity triggers), `..03_rls` (access matrix) |
 | `supabase/seed.sql` | Two fictional companies, 7 users, 8 submissions driven through the real workflow |
@@ -120,6 +124,28 @@ never auto-applied. It is unauthenticated and writes nothing yet.
 **3.7 Domain constants live in three places** (`frontend/src/lib/domain.ts`, `backend/app/schemas.py`,
 SQL enums). Change them together.
 
+**3.8 Demo store (until Supabase is connected; decided 2026-11-08).** `lib/data/` holds an
+in-memory copy of the database on `globalThis`, seeded from `seed.ts` (same ids/rows as `seed.sql`,
+timestamps spread over two weeks). It resets when the server restarts and is labelled "Demo data" on
+every screen. `queries.ts` filters exactly like the RLS policies (`canSeeClass`, `canViewSubmission`,
+`canSeeSource`, `hasActiveEmbargo` mirror the SQL helpers); `mutations.ts` enforces the same rules as
+the triggers and throws `RuleError` with a user-safe message. Server actions (`actions/admin.ts`)
+re-check session + role via `actorFor`, then call a mutation. **Swapping to Supabase = reimplement
+queries.ts/mutations.ts against Supabase; screens and actions stay.** The session now reads users
+and memberships from the store, so role changes and suspensions apply on the next request. An
+invited person signing in with the demo password accepts the invitation (stand-in for invite links).
+
+Admin rules added in the app layer (beyond the DB): you cannot change or suspend yourself; a company
+keeps at least one active admin; editing a guideline's rule bumps its version; editing or expiring a
+fact notifies owners of pending submissions that cite it (designPRD 4.2); a new fact cannot be
+already expired, a new embargo must be in the future; lifting an embargo never approves anything
+(held work stays in review, designPRD 4.9); medium risk can never be set to auto-fix and high risk is
+not configurable (designPRD 4.6); dates are entered and shown in the company timezone.
+
+**Needs schema decisions (demo store only, no table yet):** agent settings, company timezone, and an
+admin audit trail (`adminEvents`: membership/knowledge/settings changes; designPRD 6 requires them
+audited). Shown in the UI as "Not in database yet". Propose a migration before wiring Supabase.
+
 ## 4. Access matrix as built (DataBasePRD 4)
 
 | Data | Admin | Manager | Creator | Reviewer |
@@ -163,9 +189,12 @@ here are hand-built to the same tokens instead (no dependency added).
 | Screen | State |
 |---|---|
 | Login, shell, grouped sidebar, company switcher, demo-account switcher, user menu, mobile drawer | Done |
-| Dashboard | Hero + KPI and recent-submissions cards with honest "not connected" states (no data yet) |
-| Knowledge Base | Category tabs with empty states |
-| Submissions, New submission, Submission detail, Reviews, Review, Campaigns, Source, Embargoes, Analytics, Users & Roles, AI Agent Settings, Notifications, Audit Log, Settings | Labelled placeholders listing what designPRD requires |
+| Dashboard | Done (role-aware KPIs, recent submissions, risk mix, content flow, admin "needs attention") |
+| Submissions list / detail | Done for viewing (search, filters, sort, pages; findings with citations, restricted message, decisions, versions, agent log, processing disclosure; staff "Mark as released") |
+| Campaigns, Knowledge Base (+ source detail), Embargoes | Done (add/edit, expire fact, lift embargo, search, "cited by") |
+| Analytics | Done (defined KPIs, weekly submitted vs cleared, risk, issue types, statuses, most-cited guidelines; channel/campaign filters; CSV export for admin/manager) |
+| Users & Roles, AI Agent Settings, Settings, Audit Log, Notifications | Done (invite, change role, suspend/restore/revoke; autonomy per risk; company name + timezone; filtered timeline; mark read) |
+| New submission, Reviews, Review detail | Labelled placeholders (creator / reviewer / manager flows, next) |
 | Integrations | Shown as "Soon" (designPRD: future) |
 
 designPRD acceptance (section 9): A02 (creator cannot read a confidential embargo; since the creator
@@ -175,14 +204,16 @@ in the database; everything else needs the UI wired to data.
 
 ## 7. Next steps, in order
 
-1. Add Supabase keys to `.env`, create the project, run migrations + seed, **confirm the demo users can
+1. Next role builds on the demo store: creator (New submission, intent confirmation, revise,
+   accept/reject each fix), reviewer (Reviews queue, Review detail, decisions), manager (assign/reassign).
+2. Decide and migrate the demo-store-only tables (agent settings, timezone, admin audit events).
+3. Add Supabase keys to `.env`, create the project, run migrations + seed, **confirm the demo users can
    sign in** (GoTrue acceptance of seeded auth rows is untested).
-2. Wire Supabase Auth into the session seam (`getSessionUser`, actions); keep demo auth behind `ALLOW_DEMO_AUTH`.
-3. Server-side data layer and generated types; replace dashboard and list placeholders with real queries.
-4. Storage buckets and policies (private, signed URLs); New submission with upload.
-5. Backend: verify JWTs, write `ai_checks` / `issues` / `agent_action_log` with the service role.
-6. Submission detail (intent, findings with citations, diff, accept/reject per change), Reviews and decisions.
-7. Admin screens: knowledge CRUD, embargoes, users & roles, agent settings, audit log.
+4. Wire Supabase Auth into the session seam; reimplement `lib/data/queries.ts` + `mutations.ts` on
+   Supabase (RLS does the filtering); keep demo auth behind `ALLOW_DEMO_AUTH`.
+5. Storage buckets and policies (private, signed URLs); asset upload; New submission with upload.
+6. Backend: verify JWTs, write `ai_checks` / `issues` / `agent_action_log` with the service role.
+7. Embargo expiry job (requeue review, designPRD A08); overdue/escalation using the agent settings.
 8. Write `IMPLEMENTATION_PLAN.md` and `KNOWN_LIMITATIONS.md` (designPRD 11.3, 11.11).
 9. Open questions: may managers create submissions or approve medium-risk fixes? (designPRD 13; DataBasePRD 10).
 
@@ -198,6 +229,19 @@ itself runs through the real workflow triggers. Mutation checks (2026-11-07, bef
 allowing self-approval was caught; removing one embargo gate was still blocked by the second
 layer, and removing both was caught.
 
+**Verified (2026-11-08, admin build):** `tsc`, `eslint`, production build; an end-to-end run against
+`next start` in Edge, **74/74**: access matrix (182 cases, 0 mismatches); creator HTML never contains
+confidential text (knowledge, dashboard, submissions, held submission shows the restricted message);
+agency creator sees the same knowledge as in-house; guessed ids from another company / another
+creator / a confidential fact get the not-found page with no data; CSV export allowed for admin only
+among tested roles, refused for creator, reviewer, no session and another company's admin; every admin
+flow incl. validation and rule errors (invite, role change, suspend cuts access at once, restore,
+guideline versioning, fact add/edit/expire with owner alerts, asset, embargo add/lift, campaign rules,
+release approved content, agent settings persist, company rename, audit, analytics, notifications);
+**a server action submitted with a manager's cookie on an admin form is refused**; invited reviewer
+joins and sees reviewer routes only; no console errors; no horizontal scroll at 360px on 12 pages.
+Harness: `scratchpad/verify_admin.py` (starts and stops its own server on :3101).
+
 **Not verified:** anything on a real Supabase project (GoTrue login of seeded users; password hashing,
 because local Postgres lacks pgcrypto and is stubbed); Storage; frontend-backend calls; browsers other
 than Edge; screen readers.
@@ -210,6 +254,18 @@ than Edge; screen readers.
 - psycopg2 keeps only the last 50 NOTICEs; `run_local.py` runs `rls_test.sql` in sections split on
   `-- ====` lines. Keep each section under 50 expectations.
 - In plpgsql, `IF NOT CASE ... END THEN` does not parse; compute the CASE into a variable first.
+- **After a server action, use `revalidatePath("/org/[orgId]", "layout")` (helper `rerender()`), not
+  `refresh()`.** With cacheComponents + partialPrefetching, `refresh()` sent the fresh tree but the open
+  page did not update (verified).
+- **React 19 resets a `<form action>` after every submit, even a rejected one.** Forms here submit via
+  `submitKeepingValues` (onSubmit + startTransition) so a validation error keeps what was typed.
+- **Toast from the action result, not a `useEffect`:** a successful action often removes its own
+  button (Expire, Lift, Release), and the unmounted component's effect never runs.
+- `notFound()` inside a streamed page answers HTTP 200 with the not-found UI (headers already sent).
+  Same outcome for "missing" and "not yours"; tests assert no data in the body, not the status.
+- `sr-only` (absolute) children inside an `overflow-x-auto` box escape it unless the box is
+  `relative`; that made phones scroll sideways (fixed in `Table`).
+- React Compiler lint forbids `Date.now()` in render; server pages use `requestTime()` from `format.ts`.
 
 ## 10. Working agreements
 
