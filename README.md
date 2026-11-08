@@ -4,7 +4,7 @@
 against approved guidelines, facts and embargoes before publication, and routes risky decisions to
 authorised reviewers. AI checks are currently a clearly labelled mock.
 
-- Design and product spec: [designPRD.md](designPRD.md). Database spec: [DataBasePRD.md](DataBasePRD.md).
+- Specs (`designPRD.md`, `DataBasePRD.md`) are kept locally by the team and are not published in this repo.
 - **Working notes, commands, decisions, status and next steps: [CONTEXT.md](CONTEXT.md)** (start here)
 
 | Folder | What it is |

@@ -17,3 +17,8 @@ __pycache__/
 .DS_Store
 supabase/.temp/
 supabase/.branches/
+
+# Product specs: kept locally, not published
+PRD.md
+designPRD.md
+DataBasePRD.md
