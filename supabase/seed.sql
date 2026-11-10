@@ -74,7 +74,13 @@ insert into public.brand_guidelines (guideline_id, organization_id, rule, catego
   ('61000000-0000-4000-8000-000000000004', '0a000000-0000-4000-8000-000000000001',
    'Images need alt text; videos need captions.', 'accessibility', 1),
   ('61000000-0000-4000-8000-000000000005', '0a000000-0000-4000-8000-000000000002',
-   'Northwind is always written in one word.', 'terminology', 1);
+   'Northwind is always written in one word.', 'terminology', 1),
+  ('61000000-0000-4000-8000-000000000006', '0a000000-0000-4000-8000-000000000001',
+   'Never call the product "cheap"; say "affordable".', 'terminology', 1),
+  ('61000000-0000-4000-8000-000000000007', '0a000000-0000-4000-8000-000000000001',
+   'Summer Sound posts use the hashtag #SummerSound.', 'campaign', 1),
+  ('61000000-0000-4000-8000-000000000008', '0a000000-0000-4000-8000-000000000001',
+   'Sound confident and clear, not hyped: no "OMG", "insane" or "you guys".', 'voice', 1);
 
 insert into public.brand_assets (asset_id, organization_id, storage_path, asset_type, visibility) values
   ('62000000-0000-4000-8000-000000000001', '0a000000-0000-4000-8000-000000000001', 'assets/sonicx/logo-2026.svg',      'logo',  'public_to_creators'),

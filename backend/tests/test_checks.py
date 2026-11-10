@@ -140,3 +140,12 @@ def test_cors_allows_only_the_frontend_origin():
                               headers={"Origin": origin, "Access-Control-Request-Method": "POST"})
     assert preflight("http://localhost:3000").headers.get("access-control-allow-origin") == "http://localhost:3000"
     assert "access-control-allow-origin" not in preflight("https://evil.example").headers
+
+
+def test_every_issue_names_its_rule():
+    from app.mock_checks import SAMPLE_CONTENT, run_mock_checks
+    from app.schemas import Channel
+
+    result = run_mock_checks("s-rule", Channel.INSTAGRAM, SAMPLE_CONTENT)
+    assert result.issues and all(i.rule for i in result.issues)
+    assert {"embargo", "battery-claim", "product-name"} <= {i.rule for i in result.issues}

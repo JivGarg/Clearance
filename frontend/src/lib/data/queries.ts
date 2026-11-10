@@ -543,8 +543,46 @@ export const AGENT_ACTION_LABEL: Record<string, string> = {
   run_check: "Ran a check",
   auto_fix_applied: "Applied a low-risk fix",
   hold: "Placed a hold",
+  assign_reviewer: "Assigned a reviewer",
+  ask_admin: "Asked an admin",
 };
 
 export function capitalise(s: string): string {
   return s ? s[0].toUpperCase() + s.slice(1) : s;
+}
+
+// --------------------------------------------------------------------- reviews
+
+export interface QueueItem extends SubmissionListItem {
+  reviewers: { userId: string; name: string; deadline: string | null }[];
+  dueAt: string | null;
+}
+
+/** In-review work: a reviewer's own open assignments; everything in review for a manager. */
+export function reviewQueue(a: Actor, f: { risk?: Risk; channel?: Channel; campaignId?: string; overdue?: boolean } = {}): QueueItem[] {
+  const d = db();
+  const now = Date.now();
+  return listSubmissions(a, { status: "in_review", channel: f.channel, campaignId: f.campaignId })
+    .map((s) => {
+      const open = d.assignments.filter((x) => x.submissionId === s.submissionId && x.status !== "done");
+      const reviewers = open.map((x) => ({ userId: x.reviewerUserId, name: userName(x.reviewerUserId), deadline: x.deadline }));
+      const dueAt = reviewers.map((r) => r.deadline).filter((x): x is string => !!x).sort()[0] ?? null;
+      return { ...s, reviewers, dueAt };
+    })
+    .filter((s) => a.role !== "reviewer" || s.reviewers.some((r) => r.userId === a.userId))
+    .filter((s) => !f.risk || s.risk === f.risk)
+    .filter((s) => !f.overdue || (s.dueAt !== null && Date.parse(s.dueAt) < now))
+    .sort((x, y) => (x.dueAt ?? "9999").localeCompare(y.dueAt ?? "9999"));
+}
+
+/** check_assignment: active reviewers of the company who did not create the submission. */
+export function eligibleReviewers(a: Actor, submission: SubmissionRow) {
+  const d = db();
+  return d.memberships
+    .filter((m) => m.organizationId === a.orgId && m.role === "reviewer" && m.status === "active" && m.userId !== submission.createdByUserId)
+    .map((m) => ({
+      userId: m.userId,
+      name: userName(m.userId),
+      open: d.assignments.filter((x) => x.reviewerUserId === m.userId && x.status !== "done").length,
+    }));
 }

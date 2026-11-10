@@ -19,11 +19,12 @@ Team decisions on top of those documents:
 - `dashboard-reference.png` and `Clearance_HIVEMIND.pdf`, which designPRD cites, are **not in the
   repo**; the visuals follow designPRD's written description and tokens.
 
-**Status (2026-11-08):** database layer complete and tested; backend mock aligned. **Admin role
-built end to end** on an in-memory **demo store** (section 3.8): dashboard, submissions (+ detail,
-release), campaigns, knowledge base (+ source detail), embargoes, analytics (+ CSV), users & roles,
-AI agent settings, settings, audit log, notifications. Still placeholders: New submission, Reviews,
-Review detail (creator/reviewer/manager flows). Nothing talks to Supabase yet.
+**Status (2026-11-10):** every screen in designPRD 3 is built on the in-memory **demo store**
+(section 3.8). Admin (2026-11-08) plus the **full workflow** (2026-11-10): creator new submission ->
+check via the backend mock -> confirm intent -> accept fixes one by one -> send for review ->
+auto-assigned reviewer decides (approve / request changes / reject) -> creator revises -> manager
+assigns/reassigns and releases. Nothing talks to Supabase yet; the AI pipeline is still the
+rule-based mock (section 3.6).
 
 ---
 
@@ -31,6 +32,7 @@ Review detail (creator/reviewer/manager flows). Nothing talks to Supabase yet.
 
 ```bash
 # Frontend (Next.js 16.4, Cache Components, Tailwind v4)        http://localhost:3000
+# Checks call the backend: run it too, or set API_URL. Without it, drafts save with "not reachable".
 cd frontend && npm install && npm run dev
 npm run build | npm run lint | npx next typegen && npx tsc --noEmit
 
@@ -66,8 +68,10 @@ pip install pgserver psycopg2-binary && python supabase/tests/run_local.py     #
 | `frontend/src/components/layout/` | app-shell, nav-links (grouped), mobile-nav, org-switcher, role-switcher (demo accounts), notifications-panel (live bell), user-menu, page-header, placeholder-page, demo-notice |
 | `frontend/src/components/forms/` | `form-dialog` (modal form + server action), `action-button` (one-click action, optional confirm), `inline-form` (settings forms) |
 | `frontend/src/components/charts/`, `submissions/` | Dependency-free BarList / GroupedColumns / ChartCard; shared SubmissionsTable |
-| `frontend/src/lib/data/` | **Demo store** (section 3.8): `types.ts` (rows = DB tables), `seed.ts` (= seed.sql), `store.ts`, `queries.ts` (reads, filtered like RLS), `mutations.ts` (writes, enforcing the trigger rules) |
-| `frontend/src/lib/` | `domain.ts` (enums/types), `roles.ts` (nav groups, `PAGE_ROLES`, `orgPath`, `homeFor`), `demo-users.ts`, `session.ts` (**auth seam**, `requireOrg` returns an `actor`; `actorFor` for actions), `format.ts` (timezone dates), `actions/auth.ts`, `actions/admin.ts` |
+| `frontend/src/lib/data/` | **Demo store** (section 3.8): `types.ts` (rows = DB tables), `seed.ts` (= seed.sql), `store.ts`, `queries.ts` (reads, filtered like RLS), `mutations.ts` (admin writes), `workflow.ts` (create/check/revise/apply fixes/send/assign/decide, enforcing the trigger rules) |
+| `frontend/src/lib/check-service.ts`, `diff.ts` | Server-side client for the backend check service (`API_URL`); word diff for version comparison |
+| `frontend/src/components/submissions/` | SubmissionsTable; ContentCard, DiffCard, IntentView |
+| `frontend/src/lib/` | `domain.ts` (enums/types), `roles.ts` (nav groups, `PAGE_ROLES`, `orgPath`, `homeFor`), `demo-users.ts`, `session.ts` (**auth seam**, `requireOrg` returns an `actor`; `actorFor` for actions), `format.ts` (timezone dates), `actions/auth.ts`, `actions/admin.ts`, `actions/workflow.ts` |
 | `backend/app/` | `schemas.py`, `routing.py` (risk routing, pure), `mock_checks.py` (Sonic X rule bank), `routers/` |
 | `supabase/migrations/` | `20261107000001_schema` (16 tables), `..02_rules` (integrity triggers), `..03_rls` (access matrix) |
 | `supabase/seed.sql` | Two fictional companies, 7 users, 8 submissions driven through the real workflow |
@@ -142,9 +146,28 @@ already expired, a new embargo must be in the future; lifting an embargo never a
 (held work stays in review, designPRD 4.9); medium risk can never be set to auto-fix and high risk is
 not configurable (designPRD 4.6); dates are entered and shown in the company timezone.
 
+**Workflow (2026-11-10), `lib/data/workflow.ts`.** The frontend calls the backend from the server
+(`API_URL`, falling back to `NEXT_PUBLIC_API_URL`, then `http://localhost:8000`); a down service
+gives an honest retryable error and keeps the draft (A13). The backend now returns each finding's
+`rule` key; `RULE_SOURCES` links it to that company's own guideline / current fact / asset / active
+embargo. **A finding with no approved source in the company is not recorded** (designPRD 4.5) and
+the creator is told how many were skipped. Auto-fix: low/medium fixes the admin set to auto-fix
+become an agent-authored version (logged with undo data), then that version is re-checked; checks per
+version are capped by `maxCheckAttempts`. Accepted fixes apply only the chosen spans (A04); the
+ad-disclosure fix prepends `#ad`. Sending needs a confirmed intent and a check on the current version;
+resubmitting after "changes requested" needs a newer version. Auto-assign picks the previous
+reviewer, else the least-loaded eligible reviewer (never the creator), deadline from agent settings;
+none eligible -> managers notified. Editing approved content sends it back to review and re-assigns
+(A11). Decisions mirror the decision triggers (assigned, not own work, comments unless approving,
+no approval with an active embargo). Creators see their own text even if it names an embargoed item;
+they never see the embargo record or its finding.
+
 **Needs schema decisions (demo store only, no table yet):** agent settings, company timezone, and an
 admin audit trail (`adminEvents`: membership/knowledge/settings changes; designPRD 6 requires them
-audited). Shown in the UI as "Not in database yet". Propose a migration before wiring Supabase.
+audited). Shown in the UI as "Not in database yet". Also demo-only fields: version text
+(`revisions.content`; Supabase keeps it in storage), finding spans + rule (`issues.spanStart/spanEnd/rule`,
+designPRD 4.5 `content_span`), and the structured confirmed intent (`submissions.intent`,
+`intentConfirmed`). Propose a migration before wiring Supabase.
 
 ## 4. Access matrix as built (DataBasePRD 4)
 
@@ -194,7 +217,8 @@ here are hand-built to the same tokens instead (no dependency added).
 | Campaigns, Knowledge Base (+ source detail), Embargoes | Done (add/edit, expire fact, lift embargo, search, "cited by") |
 | Analytics | Done (defined KPIs, weekly submitted vs cleared, risk, issue types, statuses, most-cited guidelines; channel/campaign filters; CSV export for admin/manager) |
 | Users & Roles, AI Agent Settings, Settings, Audit Log, Notifications | Done (invite, change role, suspend/restore/revoke; autonomy per risk; company name + timezone; filtered timeline; mark read) |
-| New submission, Reviews, Review detail | Labelled placeholders (creator / reviewer / manager flows, next) |
+| New submission, Submission detail (creator), Reviews, Review detail | Done (text only; intent confirm; per-fix accept with original vs suggested; version diff; send for review; queue with risk/channel/campaign/overdue filters; decisions; manager assign/reassign) |
+| Not built | Image/document/video upload and processing; escalation of overdue reviews; embargo-expiry requeue job; cross-channel contradiction checks; reviewer "escalate" action |
 | Integrations | Shown as "Soon" (designPRD: future) |
 
 designPRD acceptance (section 9): A02 (creator cannot read a confidential embargo; since the creator
@@ -204,8 +228,9 @@ in the database; everything else needs the UI wired to data.
 
 ## 7. Next steps, in order
 
-1. Next role builds on the demo store: creator (New submission, intent confirmation, revise,
-   accept/reject each fix), reviewer (Reviews queue, Review detail, decisions), manager (assign/reassign).
+1. AI pipeline (owner: Jivesh): replace mock rules with retrieval over the company's knowledge plus a
+   model behind the same `CheckResponse` contract; keep confidential/local-only content off external
+   providers; check fixes against the confirmed intent (the mock's tone fix "a great choice" shows why).
 2. Decide and migrate the demo-store-only tables (agent settings, timezone, admin audit events).
 3. Add Supabase keys to `.env`, create the project, run migrations + seed, **confirm the demo users can
    sign in** (GoTrue acceptance of seeded auth rows is untested).
@@ -241,6 +266,17 @@ release approved content, agent settings persist, company rename, audit, analyti
 **a server action submitted with a manager's cookie on an admin form is refused**; invited reviewer
 joins and sees reviewer routes only; no console errors; no horizontal scroll at 360px on 12 pages.
 Harness: `scratchpad/verify_admin.py` (starts and stops its own server on :3101).
+
+**Verified (2026-11-10, workflow):** backend 38 tests (new: every finding names its rule); SQL 70
+(seed gained 3 guidelines); `tsc`, `eslint`, build; `scratchpad/verify_flows.py` **37/37** against a
+real backend on :8011 + `next start` on :3101: create -> real check -> 4 auto-fixes as v2; high-risk
+findings cite approved sources; creator sees only the restricted message for the embargo; send refused
+before intent confirmed; one accepted fix changes only that span (A04) with a visible diff; auto-assign;
+reviewer: approve disabled by embargo, reject needs a reason, request changes; resubmit refused without
+a new version; edit -> re-check -> resubmit -> approve; editing approved content returns it to review
+(A11); manager reassign + release; released content locked; creator blocked from the review screen;
+360px clean; **backend stopped -> draft kept with an honest error, no fake result (A13)**. Admin suite
+re-run: 74/74 (its secret check now targets the embargo record, since creators may see their own text).
 
 **Not verified:** anything on a real Supabase project (GoTrue login of seeded users; password hashing,
 because local Postgres lacks pgcrypto and is stubbed); Storage; frontend-backend calls; browsers other

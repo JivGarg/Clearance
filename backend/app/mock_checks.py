@@ -227,6 +227,7 @@ def _find_issues(
                     source=rule.source,
                     suggested_fix="Add #ad at the start of the caption.",
                     state=IssueState.OPEN,
+                    rule=rule.key,
                 )
             )
             continue
@@ -243,6 +244,7 @@ def _find_issues(
                     source=rule.source,
                     suggested_fix=rule.fix,
                     state=_initial_state(rule, autonomy),
+                    rule=rule.key,
                 )
             )
 

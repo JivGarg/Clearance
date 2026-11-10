@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useRef, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, type ReactNode } from "react";
 import { submitKeepingValues } from "@/components/forms/form-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -20,14 +21,17 @@ export function InlineForm({
   children: ReactNode;
   ariaLabel: string;
 }) {
-  const [state, formAction, pending] = useActionState<ActionState, FormData>(action, {});
   const toast = useToast();
-  const lastAt = useRef<number | undefined>(undefined);
-  useEffect(() => {
-    if (!state.at || state.at === lastAt.current) return;
-    lastAt.current = state.at;
-    if (state.ok) toast(state.message ?? "Saved.", "success");
-  }, [state, toast]);
+  const router = useRouter();
+  // Toast and navigate from the action result (not an effect): the form may unmount on success.
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(async (prev, fd) => {
+    const result = await action(prev, fd);
+    if (result.ok) {
+      toast(result.message ?? "Saved.", "success");
+      if (result.redirectTo) router.push(result.redirectTo);
+    }
+    return result;
+  }, {});
 
   return (
     <form onSubmit={(e) => submitKeepingValues(e, formAction)} aria-label={ariaLabel} className="flex flex-col gap-6" noValidate>

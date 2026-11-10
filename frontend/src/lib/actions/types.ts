@@ -4,6 +4,8 @@ export interface ActionState {
   message?: string;
   error?: string;
   at?: number;
+  /** Where the client should go next (e.g. the new submission's page). */
+  redirectTo?: string;
 }
 
 export type FormAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;

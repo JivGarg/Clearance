@@ -81,6 +81,8 @@ class Issue(BaseModel):
     # Replacement text for the flagged range. None when no automatic fix exists (e.g. blockers).
     suggested_fix: str | None
     state: IssueState
+    # Which rule produced this finding, so callers can link it to the company's own knowledge row.
+    rule: str | None = None
 
 
 class Intent(BaseModel):

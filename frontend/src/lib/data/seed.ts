@@ -102,6 +102,9 @@ export function buildSeed(nowMs: number = Date.now()): DemoDb {
     ["61000000-0000-4000-8000-000000000003", SONIC, "No health or medical claims about listening, hearing or sleep.", "claims", 1],
     ["61000000-0000-4000-8000-000000000004", SONIC, "Images need alt text; videos need captions.", "accessibility", 1],
     ["61000000-0000-4000-8000-000000000005", NORTH, "Northwind is always written in one word.", "terminology", 1],
+    ["61000000-0000-4000-8000-000000000006", SONIC, 'Never call the product "cheap"; say "affordable".', "terminology", 1],
+    ["61000000-0000-4000-8000-000000000007", SONIC, "Summer Sound posts use the hashtag #SummerSound.", "campaign", 1],
+    ["61000000-0000-4000-8000-000000000008", SONIC, 'Sound confident and clear, not hyped: no "OMG", "insane" or "you guys".', "voice", 1],
   ].map(([guidelineId, organizationId, rule, category, version]) => ({
     guidelineId: guidelineId as string,
     organizationId: organizationId as string,
@@ -207,10 +210,23 @@ export function buildSeed(nowMs: number = Date.now()): DemoDb {
     channel,
     status,
     intentSummary: intent,
+    intent: null,
+    intentConfirmed: status !== "draft",
     createdAt: createdAt(n),
     updatedAt: createdAt(n),
   }));
 
+  // Demo text of each version (storage stand-in), consistent with the seeded findings.
+  const TEXT: Record<number, string> = {
+    1: "Summer is here. The Sonic X1 keeps the music going all day. Link in bio.",
+    2: "OMG, the SonicX 1 gives you 60 hours of battery for a whole festival weekend!",
+    3: "Back to campus? Use code STUDENT20 for the student discount on the Sonic X1.",
+    4: "How to care for your Sonic X1: wipe the ear cushions once a week. [image]",
+    5: "The Sonic X1 helps you fall asleep faster. Sweet dreams. [image]",
+    6: "We are launching the Sonic X1 summer partner programme. Learn more on our site.",
+    7: "Something big is coming. Sneak peek of Project Nova soon.",
+    8: "Northwind Calm: a quiet moment in every can.",
+  };
   const rev = (n: number, v: number) => `d0000000-0000-4000-8000-0000000000${n}${v}`;
   const revisions: RevisionRow[] = SUBS.map(([n, , , creator, path]) => ({
     revisionId: rev(n, 1),
@@ -219,6 +235,7 @@ export function buildSeed(nowMs: number = Date.now()): DemoDb {
     version: 1,
     contentPath: path.replace(/v2/, "v1"),
     changeSummary: "First version",
+    content: n === 2 ? "OMG you guys, the SonicX 1 gives you 60 hours of battery for a whole festival weekend!" : TEXT[n],
     createdAt: plus(createdAt(n), 10 * 60_000),
   }));
   revisions.push({
@@ -228,6 +245,7 @@ export function buildSeed(nowMs: number = Date.now()): DemoDb {
     version: 2,
     contentPath: "submissions/s2/v2.mp4",
     changeSummary: "Recut intro, product name fixed",
+    content: TEXT[2],
     createdAt: at(-8 * DAY),
   });
   const latestRev = (n: number) => (n === 2 ? rev(2, 2) : rev(n, 1));

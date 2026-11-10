@@ -96,8 +96,18 @@ export interface SubmissionRow {
   channel: Channel;
   status: SubmissionStatus;
   intentSummary: string | null;
+  /** Demo store only (designPRD 4.3): structured intent and whether the creator confirmed it. */
+  intent: Intent | null;
+  intentConfirmed: boolean;
   createdAt: Iso;
   updatedAt: Iso;
+}
+
+export interface Intent {
+  goal: string;
+  audience: string;
+  keyMessage: string;
+  callToAction: string;
 }
 
 export interface RevisionRow {
@@ -107,6 +117,8 @@ export interface RevisionRow {
   version: number;
   contentPath: string;
   changeSummary: string | null;
+  /** Demo store only: the text itself. In Supabase it lives in private storage at contentPath. */
+  content: string;
   createdAt: Iso;
 }
 
@@ -155,6 +167,11 @@ export interface IssueRow {
   sourceId: string;
   riskLevel: Risk;
   suggestedFix: string | null;
+  /** Demo store only (designPRD 4.5 content_span): where in the checked text, for applying fixes. */
+  spanStart?: number;
+  spanEnd?: number;
+  /** Demo store only: the check rule that produced it (some fixes are instructions, not replacements). */
+  rule?: string;
   createdAt: Iso;
 }
 

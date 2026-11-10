@@ -4,8 +4,8 @@
 against approved guidelines, facts and embargoes before publication, and routes risky decisions to
 authorised reviewers.
 
-> **Status: prototype.** The admin role works end to end on fictional **demo data** kept in server
-> memory (it resets when the server restarts). Supabase is not connected yet, and content checks are a
+> **Status: prototype.** All screens work end to end (admin, manager, creator, reviewer) on fictional
+> **demo data** kept in server memory (it resets when the server restarts). Supabase is not connected yet, and content checks are a
 > clearly labelled **rule-based mock**, not an AI model. Detailed engineering notes:
 > **[CONTEXT.md](CONTEXT.md)**.
 
@@ -14,9 +14,9 @@ authorised reviewers.
 | Area | State |
 |---|---|
 | Admin screens | Dashboard, submissions (+ detail, release), campaigns, knowledge base, embargoes, analytics (+ CSV export), users & roles, AI agent settings, settings, audit log, notifications |
-| Creator, reviewer, manager flows | New submission, review queue and review decisions are **not built yet** |
+| Workflow | Creator submits text -> automatic check -> confirm intent -> accept fixes one by one -> send for review -> reviewer approves / requests changes / rejects -> manager assigns and releases. Text only for now |
 | Database (`supabase/`) | Schema, workflow rules, row-level security and seed written and tested on a local Postgres; **not yet applied to a Supabase project** |
-| Backend (`backend/`) | FastAPI mock check endpoint; not called by the frontend yet; no authentication |
+| Backend (`backend/`) | FastAPI mock check endpoint, called server-side by the frontend; no authentication yet |
 | AI pipeline | Not built: no model, retrieval, OCR or video processing yet |
 
 Roles (per company): **admin**, **manager**, **creator** (in-house and agency creators have the same
@@ -35,7 +35,7 @@ Product specs (`designPRD.md`, `DataBasePRD.md`) are kept locally by the team an
 ## Run locally
 
 ```bash
-# Frontend: http://localhost:3000
+# Frontend: http://localhost:3000 (start the backend too: submissions are checked by it)
 cd frontend
 npm install
 npm run dev
@@ -65,7 +65,8 @@ commit real keys, and never give a server-only key a `NEXT_PUBLIC_` prefix.
 | Variable | Used by | Notes |
 |---|---|---|
 | `FRONTEND_ORIGIN` | backend | Origin allowed by CORS. Default `http://localhost:3000` |
-| `NEXT_PUBLIC_API_URL` | frontend | Backend URL (not called yet) |
+| `API_URL` | frontend (server) | Backend URL for checks. Falls back to `NEXT_PUBLIC_API_URL`, then `http://localhost:8000` |
+| `NEXT_PUBLIC_API_URL` | frontend | Backend URL (fallback for `API_URL`) |
 | `ALLOW_DEMO_AUTH` | frontend | Set `true` to allow demo sign-in in a production build. The demo session is **not secure**; use only for controlled demos |
 | `GEMINI_API_KEY` | backend | Server-side only. Not used yet |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | frontend | Not used yet |
@@ -85,7 +86,7 @@ commit real keys, and never give a server-only key a `NEXT_PUBLIC_` prefix.
 
 **Frontend** (e.g. Vercel): root directory `frontend`, default Next.js build. Set
 `ALLOW_DEMO_AUTH=true` only if you want the demo sign-in to work on that deployment, and
-`NEXT_PUBLIC_API_URL` to the Render URL.
+`API_URL` to the Render URL (checks fail with a clear message if it is unreachable).
 
 ## Known limitations
 
